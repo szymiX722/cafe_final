@@ -1,3 +1,4 @@
+const bcrypt = require('bcrypt');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -69,3 +70,34 @@ app.delete('/zamowienie/:id', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Serwer biega na porcie ${PORT}`));
+
+// Schemat Użytkownika
+const userSchema = new mongoose.Schema({
+    username: { type: String, unique: true, required: true },
+    password: { type: String, required: true }
+});
+const User = mongoose.model('User', userSchema);
+
+// Endpoint do logowania
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const user = await User.findOne({ username });
+        if (user && await bcrypt.compare(password, user.password)) {
+            res.json({ success: true, message: "Zalogowano" });
+        } else {
+            res.status(401).json({ success: false, message: "Błędne dane" });
+        }
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// Endpoint do tworzenia użytkownika (użyjesz go raz, żeby stworzyć konto szefowej)
+app.post('/create-admin-xyz123', async (req, res) => {
+    const { username, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, password: hashedPassword });
+    await newUser.save();
+    res.send("Admin stworzony!");
+});
