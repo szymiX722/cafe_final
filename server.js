@@ -41,4 +41,15 @@ app.get('/lista-zamowien', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Endpoint do usuwania zamówienia
+app.delete('/zamowienie/:id', async (req, res) => {
+    try {
+        await Zamowienie.findByIdAndDelete(req.params.id);
+        res.status(200).send({ message: 'Usunięto pomyślnie' });
+    } catch (error) {
+        res.status(500).send({ error: 'Błąd podczas usuwania z bazy' });
+    }
+});
+
 app.listen(PORT, () => console.log(`Serwer działa na porcie ${PORT}`));
