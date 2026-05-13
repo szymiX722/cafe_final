@@ -13,13 +13,14 @@ mongoose.connect(process.env.MONGO_URL)
   .catch(err => console.error('Błąd połączenia z bazą:', err));
 
 // Definicja struktury zamówienia
-const Zamowienie = mongoose.model('Zamowienie', {
+const zamowienieSchema = new mongoose.Schema({
+    imieNazwisko: String,
     ciasto: String,
     ilosc: Number,
     data_odbioru: String,
+    kwota: Number,
     uwagi: String,
-    kwota: String,
-    status: { type: String, default: 'Nowe' },
+    oplacone: { type: Boolean, default: false }, // Nowe pole
     data_zlozenia: { type: Date, default: Date.now }
 });
 
