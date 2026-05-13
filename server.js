@@ -7,12 +7,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Połączenie z MongoDB
 mongoose.connect(process.env.MONGO_URL)
     .then(() => console.log('Połączono z MongoDB'))
     .catch(err => console.error('Błąd połączenia:', err));
 
-// AKTUALNY SCHEMAT (musi pasować do formularza!)
+// --- SCHEMAT DLA CIAST ---
 const zamowienieSchema = new mongoose.Schema({
     imieNazwisko: String,
     ciasto: String,
@@ -23,81 +22,103 @@ const zamowienieSchema = new mongoose.Schema({
     oplacone: { type: Boolean, default: false },
     data_zlozenia: { type: Date, default: Date.now }
 });
-
 const Zamowienie = mongoose.model('Zamowienie', zamowienieSchema);
 
-// Endpoint do odbierania zamówień
+// --- SCHEMAT DLA TORTÓW ---
+const tortSchema = new mongoose.Schema({
+    imieNazwisko: String,
+    porcje: String,
+    biszkopt: String,
+    krem1: String,
+    krem2: String,
+    dodatki: String,
+    okazja: String,
+    styl: String,
+    uwagi: String,
+    data_odbioru: String,
+    oplacone: { type: Boolean, default: false },
+    data_zlozenia: { type: Date, default: Date.now }
+});
+const Tort = mongoose.model('Tort', tortSchema);
+
+// --- ENDPOINTY DLA CIAST ---
 app.post('/zamowienie', async (req, res) => {
     try {
-        const noweZamowienie = new Zamowienie(req.body);
-        await noweZamowienie.save();
-        res.status(201).json(noweZamowienie);
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
+        const nowe = new Zamowienie(req.body);
+        await nowe.save();
+        res.status(201).json(nowe);
+    } catch (err) { res.status(400).json(err); }
 });
 
-// Endpoint do listy (z sortowaniem po dacie odbioru)
 app.get('/lista-zamowien', async (req, res) => {
     try {
         const zamowienia = await Zamowienie.find().sort({ data_odbioru: 1 });
         res.json(zamowienia);
-    } catch (err) {
-        res.status(500).json(err);
-    }
+    } catch (err) { res.status(500).json(err); }
 });
 
-// Endpoint do zmiany statusu płatności (dla admina)
 app.patch('/zamowienie/:id/status-platnosci', async (req, res) => {
     try {
-        const { oplacone } = req.body;
-        const update = await Zamowienie.findByIdAndUpdate(req.params.id, { oplacone }, { new: true });
+        const update = await Zamowienie.findByIdAndUpdate(req.params.id, { oplacone: req.body.oplacone }, { new: true });
         res.json(update);
-    } catch (err) {
-        res.status(500).json(err);
-    }
+    } catch (err) { res.status(500).json(err); }
 });
 
-// Endpoint do usuwania
 app.delete('/zamowienie/:id', async (req, res) => {
     try {
         await Zamowienie.findByIdAndDelete(req.params.id);
-        res.status(200).send({ message: 'Usunięto' });
-    } catch (err) {
-        res.status(500).send(err);
-    }
+        res.status(200).send("Usunięto");
+    } catch (err) { res.status(500).json(err); }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Serwer biega na porcie ${PORT}`));
+// --- ENDPOINTY DLA TORTÓW ---
+app.post('/zamowienie-tort', async (req, res) => {
+    try {
+        const nowyTort = new Tort(req.body);
+        await nowyTort.save();
+        res.status(201).json(nowyTort);
+    } catch (err) { res.status(400).json(err); }
+});
 
-// Schemat Użytkownika
+app.get('/lista-tortow', async (req, res) => {
+    try {
+        const torty = await Tort.find().sort({ data_odbioru: 1 });
+        res.json(torty);
+    } catch (err) { res.status(500).json(err); }
+});
+
+app.patch('/tort/:id/status-platnosci', async (req, res) => {
+    try {
+        const update = await Tort.findByIdAndUpdate(req.params.id, { oplacone: req.body.oplacone }, { new: true });
+        res.json(update);
+    } catch (err) { res.status(500).json(err); }
+});
+
+app.delete('/tort/:id', async (req, res) => {
+    try {
+        await Tort.findByIdAndDelete(req.params.id);
+        res.status(200).send("Usunięto");
+    } catch (err) { res.status(500).json(err); }
+});
+
+// --- LOGOWANIE ---
 const userSchema = new mongoose.Schema({
     username: { type: String, unique: true, required: true },
     password: { type: String, required: true }
 });
 const User = mongoose.model('User', userSchema);
 
-// Endpoint do logowania
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     try {
         const user = await User.findOne({ username });
         if (user && await bcrypt.compare(password, user.password)) {
-            res.json({ success: true, message: "Zalogowano" });
+            res.json({ success: true });
         } else {
-            res.status(401).json({ success: false, message: "Błędne dane" });
+            res.status(401).json({ success: false });
         }
-    } catch (err) {
-        res.status(500).json(err);
-    }
+    } catch (err) { res.status(500).json(err); }
 });
 
-// Endpoint do tworzenia użytkownika (użyjesz go raz, żeby stworzyć konto szefowej)
-app.post('/create-admin-xyz123', async (req, res) => {
-    const { username, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hashedPassword });
-    await newUser.save();
-    res.send("Admin stworzony!");
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Serwer biega na ${PORT}`));
