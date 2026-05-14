@@ -106,18 +106,22 @@ const userSchema = new mongoose.Schema({
     username: { type: String, unique: true, required: true },
     password: { type: String, required: true }
 });
-const User = mongoose.model('User', userSchema);
+const User = mongoose.model('User', userSchema, 'pracownicy');
 
+// Wersja TYLKO jeśli hasła w bazie danych są zapisane zwykłym tekstem bez szyfrowania:
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     try {
         const user = await User.findOne({ username });
-        if (user && await bcrypt.compare(password, user.password)) {
-            res.json({ success: true });
+        // Zwykłe porównanie tekstów zamiast bcrypt.compare
+        if (user && user.password === password) { 
+            res.json({ success: true, message: "Zalogowano" });
         } else {
-            res.status(401).json({ success: false });
+            res.status(401).json({ success: false, message: "Błędne dane" });
         }
-    } catch (err) { res.status(500).json(err); }
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
 const PORT = process.env.PORT || 3000;
