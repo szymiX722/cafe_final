@@ -103,18 +103,22 @@ app.delete('/tort/:id', async (req, res) => {
 
 // --- LOGOWANIE ---
 const userSchema = new mongoose.Schema({
-    username: { type: String, unique: true, required: true },
-    password: { type: String, required: true }
+    login: { type: String, required: true },
+    pass: { type: String, required: true }
 });
 const User = mongoose.model('User', userSchema, 'pracownicy');
 
 // Wersja TYLKO jeśli hasła w bazie danych są zapisane zwykłym tekstem bez szyfrowania:
 app.post('/login', async (req, res) => {
-    const { username, password } = req.body;
+    // Front-end z admin.html nadal wysyła w paczce { username, password }
+    const { username, password } = req.body; 
+    
     try {
-        const user = await User.findOne({ username });
-        // Zwykłe porównanie tekstów zamiast bcrypt.compare
-        if (user && user.password === password) { 
+        // Szukamy w bazie po polu 'login', a nie 'username'
+        const user = await User.findOne({ login: username });
+        
+        // Zwykłe porównanie tekstowe (user.pass === password) zamiast bcrypt.compare
+        if (user && user.pass === password) {
             res.json({ success: true, message: "Zalogowano" });
         } else {
             res.status(401).json({ success: false, message: "Błędne dane" });
