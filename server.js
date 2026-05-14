@@ -22,7 +22,7 @@ const zamowienieSchema = new mongoose.Schema({
     oplacone: { type: Boolean, default: false },
     data_zlozenia: { type: Date, default: Date.now }
 });
-const Zamowienie = mongoose.model('Zamowienie', zamowienieSchema);
+const Zamowienie = mongoose.model('Zamowienie', zamowienieSchema, 'zamowienia');
 
 // --- SCHEMAT DLA TORTÓW ---
 const tortSchema = new mongoose.Schema({
