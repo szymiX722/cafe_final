@@ -144,27 +144,6 @@ app.post('/login', async (req, res) => {
     }
 });
 
-//TESTTTTTT
-app.get('/ustaw-haslo/:nowyLogin/:noweHaslo', async (req, res) => {
-    const { nowyLogin, noweHaslo } = req.params;
-    try {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPass = await bcrypt.hash(noweHaslo, salt);
-
-        // Szukamy użytkownika po loginie i aktualizujemy jego hasło. 
-        // Jeśli użytkownik nie istnieje, opcja upsert: true automatycznie go STWORZY!
-        const wynik = await User.findOneAndUpdate(
-            { login: nowyLogin }, 
-            { pass: hashedPass },
-            { new: true, upsert: true }
-        );
-
-        res.send(`Sukces! Konto dla użytkownika '${nowyLogin}' zostało skonfigurowane w bazie z bezpiecznym hasłem.`);
-    } catch (err) {
-        res.status(500).send("Błąd: " + err.message);
-    }
-});
-
 const PORT = process.env.PORT || 3000;
 
 if (process.env.NODE_ENV !== 'production') {
