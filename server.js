@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const bcrypt = require('bcryptjs'); // DODAJ TĘ LINIJKĘ
 const app = express();
 
 app.use(cors());
@@ -114,11 +115,21 @@ app.delete('/tort/:id', async (req, res) => {
 
 
 // --- LOGOWANIE ---
+// --- LOGOWANIE (Z SZYFROWANIEM BCRYPT) ---
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     try {
+        // 1. Znajdź użytkownika po loginie
         const user = await User.findOne({ login: username });
-        if (user && user.pass === password) {
+        
+        if (!user) {
+            return res.status(401).json({ success: false, message: "Błędne dane" });
+        }
+
+        // 2. Porównaj wpisane hasło tekstowe z zahaszowanym hasłem z bazy danych
+        const isMatch = await bcrypt.compare(password, user.pass);
+
+        if (isMatch) {
             res.json({ success: true, message: "Zalogowano" });
         } else {
             res.status(401).json({ success: false, message: "Błędne dane" });
