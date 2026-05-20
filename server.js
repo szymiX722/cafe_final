@@ -116,7 +116,7 @@ app.delete('/tort/:id', async (req, res) => {
 
 // --- LOGOWANIE ---
 // --- LOGOWANIE (Z SZYFROWANIEM BCRYPT) ---
-app.post('/login', async (req, res) => {
+app.post('/login', async (req, res) => { // <- SŁOWO 'async' TUTAJ JEST KLUCZOWE
     const { username, password } = req.body;
     try {
         // 1. Znajdź użytkownika po loginie
@@ -135,7 +135,7 @@ app.post('/login', async (req, res) => {
             res.status(401).json({ success: false, message: "Błędne dane" });
         }
     } catch (err) {
-        res.status(500).json(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
