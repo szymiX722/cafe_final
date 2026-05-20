@@ -1,4 +1,3 @@
-const bcrypt = require('bcrypt');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -7,13 +6,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Połączenie z MongoDB Atlas (zmienna MONGO_URL w Railway)
 mongoose.connect(process.env.MONGO_URL)
-    .then(() => console.log('Połączono z MongoDB'))
+    .then(() => console.log('Połączono z MongoDB Atlas'))
     .catch(err => console.error('Błąd połączenia:', err));
 
-// --- SCHEMAT DLA CIAST ---
+// --- SCHEMAT I MODEL DLA CIAST (Kolekcja: zamowienia) ---
 const zamowienieSchema = new mongoose.Schema({
     imieNazwisko: String,
+    telefon: String, // DODANE POLE
     ciasto: String,
     ilosc: String,
     data_odbioru: String,
@@ -24,9 +25,10 @@ const zamowienieSchema = new mongoose.Schema({
 });
 const Zamowienie = mongoose.model('Zamowienie', zamowienieSchema, 'zamowienia');
 
-// --- SCHEMAT DLA TORTÓW ---
+// --- SCHEMAT I MODEL DLA TORTÓW (Kolekcja: torts) ---
 const tortSchema = new mongoose.Schema({
     imieNazwisko: String,
+    telefon: String, // DODANE POLE
     porcje: String,
     biszkopt: String,
     krem1: String,
@@ -41,13 +43,21 @@ const tortSchema = new mongoose.Schema({
 });
 const Tort = mongoose.model('Tort', tortSchema);
 
+// --- SCHEMAT I MODEL DLA UŻYTKOWNIKÓW (Kolekcja: pracownicy) ---
+const userSchema = new mongoose.Schema({
+    login: { type: String, required: true },
+    pass: { type: String, required: true }
+});
+const User = mongoose.model('User', userSchema, 'pracownicy');
+
+
 // --- ENDPOINTY DLA CIAST ---
 app.post('/zamowienie', async (req, res) => {
     try {
         const nowe = new Zamowienie(req.body);
         await nowe.save();
         res.status(201).json(nowe);
-    } catch (err) { res.status(400).json(err); }
+    } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
 app.get('/lista-zamowien', async (req, res) => {
@@ -67,9 +77,10 @@ app.patch('/zamowienie/:id/status-platnosci', async (req, res) => {
 app.delete('/zamowienie/:id', async (req, res) => {
     try {
         await Zamowienie.findByIdAndDelete(req.params.id);
-        res.status(200).send("Usunięto");
+        res.status(200).send({ message: 'Usunięto' });
     } catch (err) { res.status(500).json(err); }
 });
+
 
 // --- ENDPOINTY DLA TORTÓW ---
 app.post('/zamowienie-tort', async (req, res) => {
@@ -77,7 +88,7 @@ app.post('/zamowienie-tort', async (req, res) => {
         const nowyTort = new Tort(req.body);
         await nowyTort.save();
         res.status(201).json(nowyTort);
-    } catch (err) { res.status(400).json(err); }
+    } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
 app.get('/lista-tortow', async (req, res) => {
@@ -97,27 +108,16 @@ app.patch('/tort/:id/status-platnosci', async (req, res) => {
 app.delete('/tort/:id', async (req, res) => {
     try {
         await Tort.findByIdAndDelete(req.params.id);
-        res.status(200).send("Usunięto");
+        res.status(200).send({ message: 'Usunięto' });
     } catch (err) { res.status(500).json(err); }
 });
 
-// --- LOGOWANIE ---
-const userSchema = new mongoose.Schema({
-    login: { type: String, required: true },
-    pass: { type: String, required: true }
-});
-const User = mongoose.model('User', userSchema, 'pracownicy');
 
-// Wersja TYLKO jeśli hasła w bazie danych są zapisane zwykłym tekstem bez szyfrowania:
+// --- LOGOWANIE ---
 app.post('/login', async (req, res) => {
-    // Front-end z admin.html nadal wysyła w paczce { username, password }
-    const { username, password } = req.body; 
-    
+    const { username, password } = req.body;
     try {
-        // Szukamy w bazie po polu 'login', a nie 'username'
         const user = await User.findOne({ login: username });
-        
-        // Zwykłe porównanie tekstowe (user.pass === password) zamiast bcrypt.compare
         if (user && user.pass === password) {
             res.json({ success: true, message: "Zalogowano" });
         } else {
@@ -129,4 +129,4 @@ app.post('/login', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Serwer biega na ${PORT}`));
+app.listen(PORT, () => console.log(`Serwer biega na porcie ${PORT}`));
