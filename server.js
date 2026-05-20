@@ -145,25 +145,21 @@ app.post('/login', async (req, res) => {
 });
 
 //TESTTTTTT
-// --- TYMCZASOWY ENDPOINT DO USTAWIANIA HASŁA (USUŃ PO ZALOGOWANIU) ---
-app.get('/ustaw-haslo-testowe', async (req, res) => {
+app.get('/ustaw-haslo/:nowyLogin/:noweHaslo', async (req, res) => {
+    const { nowyLogin, noweHaslo } = req.params;
     try {
-        // Generujemy bezpieczny hasz dla wybranego hasła tekstowego
         const salt = await bcrypt.genSalt(10);
-        const hashedPass = await bcrypt.hash('93u6EEdGt', salt); // Tutaj wpisałem jedno z Twoich haseł
+        const hashedPass = await bcrypt.hash(noweHaslo, salt);
 
-        // Aktualizujemy konto użytkownika o loginie 'szymon' w bazie danych
+        // Szukamy użytkownika po loginie i aktualizujemy jego hasło. 
+        // Jeśli użytkownik nie istnieje, opcja upsert: true automatycznie go STWORZY!
         const wynik = await User.findOneAndUpdate(
-            { login: 'szymon' }, 
+            { login: nowyLogin }, 
             { pass: hashedPass },
-            { new: true }
+            { new: true, upsert: true }
         );
 
-        if (wynik) {
-            res.send(`Sukces! Hasło zostało zaszyfrowane i zaktualizowane w bazie. Nowy hasz to: ${hashedPass}`);
-        } else {
-            res.status(404).send("Nie znaleziono w bazie użytkownika o loginie 'szymon'");
-        }
+        res.send(`Sukces! Konto dla użytkownika '${nowyLogin}' zostało skonfigurowane w bazie z bezpiecznym hasłem.`);
     } catch (err) {
         res.status(500).send("Błąd: " + err.message);
     }
