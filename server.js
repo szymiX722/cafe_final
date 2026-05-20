@@ -1,13 +1,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const bcrypt = require('bcryptjs'); // DODAJ TĘ LINIJKĘ
+const bcrypt = require('bcryptjs');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Połączenie z MongoDB Atlas (zmienna MONGO_URL w Railway)
+// Połączenie z MongoDB Atlas
 mongoose.connect(process.env.MONGO_URL)
     .then(() => console.log('Połączono z MongoDB Atlas'))
     .catch(err => console.error('Błąd połączenia:', err));
@@ -29,7 +29,7 @@ const Zamowienie = mongoose.model('Zamowienie', zamowienieSchema, 'zamowienia');
 // --- SCHEMAT I MODEL DLA TORTÓW (Kolekcja: torts) ---
 const tortSchema = new mongoose.Schema({
     imieNazwisko: String,
-    telefon: String, // DODANE POLE
+    telefon: String,
     porcje: String,
     biszkopt: String,
     krem1: String,
@@ -120,16 +120,8 @@ app.post('/login', async (req, res) => {
     try {
         const user = await User.findOne({ login: username });
         
-        // Logi pomocnicze w panelu Vercel (zobaczysz w zakładce Logs co dokładnie tam trafia)
-        console.log("Próba logowania użytkownika:", username);
-        console.log("Czy znaleziono użytkownika w bazie?:", !!user);
-        if (user) {
-            console.log("Hasz pobrany z bazy (user.pass):", user.pass);
-            console.log("Hasło przesłane z front-endu:", password);
-        }
-
         if (!user || !user.pass) {
-            return res.status(401).json({ success: false, message: "Błędne dane lub brak pola pass w schemacie" });
+            return res.status(401).json({ success: false, message: "Błędne dane" });
         }
 
         const isMatch = await bcrypt.compare(password, user.pass);
@@ -144,7 +136,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// --- START SERWERA (POPRAWNA KOŃCÓWKA DLA VERCEL) ---
+// --- START SERWERA ---
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => console.log(`Serwer biega na porcie ${PORT}`));
