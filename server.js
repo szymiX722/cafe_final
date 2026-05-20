@@ -14,7 +14,7 @@ mongoose.connect(process.env.MONGO_URL)
 // --- SCHEMAT I MODEL DLA CIAST (Kolekcja: zamowienia) ---
 const zamowienieSchema = new mongoose.Schema({
     imieNazwisko: String,
-    telefon: String, // DODANE POLE
+    telefon: String,
     ciasto: String,
     ilosc: String,
     data_odbioru: String,
