@@ -115,18 +115,23 @@ app.delete('/tort/:id', async (req, res) => {
 
 
 // --- LOGOWANIE ---
-// --- LOGOWANIE (Z SZYFROWANIEM BCRYPT) ---
-app.post('/login', async (req, res) => { // <- SŁOWO 'async' TUTAJ JEST KLUCZOWE
+app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     try {
-        // 1. Znajdź użytkownika po loginie
         const user = await User.findOne({ login: username });
         
-        if (!user) {
-            return res.status(401).json({ success: false, message: "Błędne dane" });
+        // Logi pomocnicze w panelu Vercel (zobaczysz w zakładce Logs co dokładnie tam trafia)
+        console.log("Próba logowania użytkownika:", username);
+        console.log("Czy znaleziono użytkownika w bazie?:", !!user);
+        if (user) {
+            console.log("Hasz pobrany z bazy (user.pass):", user.pass);
+            console.log("Hasło przesłane z front-endu:", password);
         }
 
-        // 2. Porównaj wpisane hasło tekstowe z zahaszowanym hasłem z bazy danych
+        if (!user || !user.pass) {
+            return res.status(401).json({ success: false, message: "Błędne dane lub brak pola pass w schemacie" });
+        }
+
         const isMatch = await bcrypt.compare(password, user.pass);
 
         if (isMatch) {
