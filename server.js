@@ -144,6 +144,31 @@ app.post('/login', async (req, res) => {
     }
 });
 
+//TESTTTTTT
+// --- TYMCZASOWY ENDPOINT DO USTAWIANIA HASŁA (USUŃ PO ZALOGOWANIU) ---
+app.get('/ustaw-haslo-testowe', async (req, res) => {
+    try {
+        // Generujemy bezpieczny hasz dla wybranego hasła tekstowego
+        const salt = await bcrypt.genSalt(10);
+        const hashedPass = await bcrypt.hash('93u6EEdGt', salt); // Tutaj wpisałem jedno z Twoich haseł
+
+        // Aktualizujemy konto użytkownika o loginie 'szymon' w bazie danych
+        const wynik = await User.findOneAndUpdate(
+            { login: 'szymon' }, 
+            { pass: hashedPass },
+            { new: true }
+        );
+
+        if (wynik) {
+            res.send(`Sukces! Hasło zostało zaszyfrowane i zaktualizowane w bazie. Nowy hasz to: ${hashedPass}`);
+        } else {
+            res.status(404).send("Nie znaleziono w bazie użytkownika o loginie 'szymon'");
+        }
+    } catch (err) {
+        res.status(500).send("Błąd: " + err.message);
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 
 if (process.env.NODE_ENV !== 'production') {
