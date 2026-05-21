@@ -72,6 +72,25 @@ app.get('/lista-zamowien', async (req, res) => {
     } catch (err) { res.status(500).json(err); }
 });
 
+// --- ENDPOINTY POBIERANIA Z ARCHIWUM ---
+
+// Pobieranie zarchiwizowanych ciast
+app.get('/lista-archiwum-zamowien', async (req, res) => {
+    try {
+        // Sortujemy od najnowszych (data_zlozenia: -1), żeby historia była czytelna
+        const archiwum = await ArchiwumZamowienie.find().sort({ data_zlozenia: -1 });
+        res.json(archiwum);
+    } catch (err) { res.status(500).json(err); }
+});
+
+// Pobieranie zarchiwizowanych tortów
+app.get('/lista-archiwum-tortow', async (req, res) => {
+    try {
+        const archiwum = await ArchiwumTort.find().sort({ data_zlozenia: -1 });
+        res.json(archiwum);
+    } catch (err) { res.status(500).json(err); }
+});
+
 app.patch('/zamowienie/:id/status-platnosci', async (req, res) => {
     try {
         const update = await Zamowienie.findByIdAndUpdate(req.params.id, { oplacone: req.body.oplacone }, { new: true });
