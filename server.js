@@ -44,6 +44,10 @@ const tortSchema = new mongoose.Schema({
 });
 const Tort = mongoose.model('Tort', tortSchema);
 
+// --- SCHEMATY I MODELE DLA ARCHIWUM (Kolekcje: archiwum_zamowien i archiwum_tortow) ---
+const ArchiwumZamowienie = mongoose.model('ArchiwumZamowienie', new mongoose.Schema({}, { strict: false }), 'archiwum_zamowien');
+const ArchiwumTort = mongoose.model('ArchiwumTort', new mongoose.Schema({}, { strict: false }), 'archiwum_tortow');
+
 // --- SCHEMAT I MODEL DLA UŻYTKOWNIKÓW (Kolekcja: pracownicy) ---
 const userSchema = new mongoose.Schema({
     login: { type: String, required: true },
@@ -75,11 +79,26 @@ app.patch('/zamowienie/:id/status-platnosci', async (req, res) => {
     } catch (err) { res.status(500).json(err); }
 });
 
-app.delete('/zamowienie/:id', async (req, res) => {
+// UNIWERSALNA AKTUALIZACJA DANYCH CIASTA (Edycja z tabeli)
+app.patch('/zamowienie/:id', async (req, res) => {
     try {
+        const update = await Zamowienie.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(update);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ZMIENIONO: Stare usuwanie zastąpione akcją przeniesienia do archiwum
+app.post('/zamowienie/:id/archiwizuj', async (req, res) => {
+    try {
+        const zamowienie = await Zamowienie.findById(req.params.id);
+        if (!zamowienie) {
+            return res.status(404).json({ error: "Nie znaleziono zamówienia" });
+        }
+        const daneDoArchiwum = zamowienie.toObject();
+        await ArchiwumZamowienie.create(daneDoArchiwum);
         await Zamowienie.findByIdAndDelete(req.params.id);
-        res.status(200).send({ message: 'Usunięto' });
-    } catch (err) { res.status(500).json(err); }
+        res.json({ success: true, message: "Zamówienie zarchiwizowane pomyślnie" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 
@@ -106,11 +125,26 @@ app.patch('/tort/:id/status-platnosci', async (req, res) => {
     } catch (err) { res.status(500).json(err); }
 });
 
-app.delete('/tort/:id', async (req, res) => {
+// UNIWERSALNA AKTUALIZACJA DANYCH TORTU (Edycja z tabeli)
+app.patch('/tort/:id', async (req, res) => {
     try {
+        const update = await Tort.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(update);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ZMIENIONO: Stare usuwanie zastąpione akcją przeniesienia do archiwum
+app.post('/tort/:id/archiwizuj', async (req, res) => {
+    try {
+        const tort = await Tort.findById(req.params.id);
+        if (!tort) {
+            return res.status(404).json({ error: "Nie znaleziono tortu" });
+        }
+        const daneDoArchiwum = tort.toObject();
+        await ArchiwumTort.create(daneDoArchiwum);
         await Tort.findByIdAndDelete(req.params.id);
-        res.status(200).send({ message: 'Usunięto' });
-    } catch (err) { res.status(500).json(err); }
+        res.json({ success: true, message: "Tort zarchiwizowany pomyślnie" });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 
