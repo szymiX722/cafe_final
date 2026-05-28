@@ -120,6 +120,63 @@ app.post('/zamowienie/:id/archiwizuj', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- ENDPOINTY PRZYWRACANIA Z ARCHIWUM ---
+
+// Przywracanie zamówienia na ciasto
+app.post('/archiwum-zamowienie/:id/przywroc', async (req, res) => {
+    try {
+        const id = req.params.id;
+        // 1. Znajdź w archiwum
+        const zarchiwizowane = await ArchiwumZamowienie.findById(id);
+        if (!zarchiwizowane) {
+            return res.status(404).json({ message: "Nie znaleziono zamówienia w archiwum." });
+        }
+
+        // 2. Skonwertuj na zwykły obiekt i usuń stary identyfikator _id (Mongoose wygeneruje nowy)
+        const daneZamowienia = zarchiwizowane.toObject();
+        delete daneZamowienia._id;
+
+        // 3. Zapisz w aktywnej kolekcji
+        const przywrocone = new Zamowienie(daneZamowienia);
+        await przywrocone.save();
+
+        // 4. Usuń z archiwum
+        await ArchiwumZamowienie.findByIdAndDelete(id);
+
+        res.json({ success: true, message: "Zamówienie przywrócone pomyślnie." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json(err);
+    }
+});
+
+// Przywracanie zamówienia na tort
+app.post('/archiwum-tort/:id/przywroc', async (req, res) => {
+    try {
+        const id = req.params.id;
+        // 1. Znajdź w archiwum
+        const zarchiwizowane = await ArchiwumTort.findById(id);
+        if (!zarchiwizowane) {
+            return res.status(404).json({ message: "Nie znaleziono tortu w archiwum." });
+        }
+
+        // 2. Skonwertuj na zwykły obiekt i usuń stary identyfikator _id
+        const daneTortu = zarchiwizowane.toObject();
+        delete daneTortu._id;
+
+        // 3. Zapisz w aktywnej kolekcji
+        const przywrocone = new Tort(daneTortu);
+        await przywrocone.save();
+
+        // 4. Usuń z archiwum
+        await ArchiwumTort.findByIdAndDelete(id);
+
+        res.json({ success: true, message: "Tort przywrócony pomyślnie." });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json(err);
+    }
+});
 
 // --- ENDPOINTY DLA TORTÓW ---
 app.post('/zamowienie-tort', async (req, res) => {
