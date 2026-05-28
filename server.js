@@ -73,17 +73,13 @@ app.get('/lista-zamowien', async (req, res) => {
 });
 
 // --- ENDPOINTY POBIERANIA Z ARCHIWUM ---
-
-// Pobieranie zarchiwizowanych ciast
 app.get('/lista-archiwum-zamowien', async (req, res) => {
     try {
-        // Sortujemy od najnowszych (data_zlozenia: -1), żeby historia była czytelna
         const archiwum = await ArchiwumZamowienie.find().sort({ data_zlozenia: -1 });
         res.json(archiwum);
     } catch (err) { res.status(500).json(err); }
 });
 
-// Pobieranie zarchiwizowanych tortów
 app.get('/lista-archiwum-tortow', async (req, res) => {
     try {
         const archiwum = await ArchiwumTort.find().sort({ data_zlozenia: -1 });
@@ -98,7 +94,6 @@ app.patch('/zamowienie/:id/status-platnosci', async (req, res) => {
     } catch (err) { res.status(500).json(err); }
 });
 
-// UNIWERSALNA AKTUALIZACJA DANYCH CIASTA (Edycja z tabeli)
 app.patch('/zamowienie/:id', async (req, res) => {
     try {
         const update = await Zamowienie.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -106,7 +101,6 @@ app.patch('/zamowienie/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ZMIENIONO: Stare usuwanie zastąpione akcją przeniesienia do archiwum
 app.post('/zamowienie/:id/archiwizuj', async (req, res) => {
     try {
         const zamowienie = await Zamowienie.findById(req.params.id);
@@ -121,60 +115,47 @@ app.post('/zamowienie/:id/archiwizuj', async (req, res) => {
 });
 
 // --- ENDPOINTY PRZYWRACANIA Z ARCHIWUM ---
-
-// Przywracanie zamówienia na ciasto
 app.post('/archiwum-zamowienie/:id/przywroc', async (req, res) => {
     try {
         const id = req.params.id;
-        // 1. Znajdź w archiwum
         const zarchiwizowane = await ArchiwumZamowienie.findById(id);
         if (!zarchiwizowane) {
             return res.status(404).json({ message: "Nie znaleziono zamówienia w archiwum." });
         }
 
-        // 2. Skonwertuj na zwykły obiekt i usuń stary identyfikator _id (Mongoose wygeneruje nowy)
         const daneZamowienia = zarchiwizowane.toObject();
         delete daneZamowienia._id;
 
-        // 3. Zapisz w aktywnej kolekcji
         const przywrocone = new Zamowienie(daneZamowienia);
         await przywrocone.save();
-
-        // 4. Usuń z archiwum
         await ArchiwumZamowienie.findByIdAndDelete(id);
 
         res.json({ success: true, message: "Zamówienie przywrócone pomyślnie." });
     } catch (err) {
         console.error(err);
-        res.status(500).json(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
-// Przywracanie zamówienia na tort
 app.post('/archiwum-tort/:id/przywroc', async (req, res) => {
     try {
         const id = req.params.id;
-        // 1. Znajdź w archiwum
         const zarchiwizowane = await ArchiwumTort.findById(id);
         if (!zarchiwizowane) {
             return res.status(404).json({ message: "Nie znaleziono tortu w archiwum." });
         }
 
-        // 2. Skonwertuj na zwykły obiekt i usuń stary identyfikator _id
         const daneTortu = zarchiwizowane.toObject();
         delete daneTortu._id;
 
-        // 3. Zapisz w aktywnej kolekcji
         const przywrocone = new Tort(daneTortu);
         await przywrocone.save();
-
-        // 4. Usuń z archiwum
         await ArchiwumTort.findByIdAndDelete(id);
 
         res.json({ success: true, message: "Tort przywrócony pomyślnie." });
     } catch (err) {
         console.error(err);
-        res.status(500).json(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -201,7 +182,6 @@ app.patch('/tort/:id/status-platnosci', async (req, res) => {
     } catch (err) { res.status(500).json(err); }
 });
 
-// UNIWERSALNA AKTUALIZACJA DANYCH TORTU (Edycja z tabeli)
 app.patch('/tort/:id', async (req, res) => {
     try {
         const update = await Tort.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -209,7 +189,6 @@ app.patch('/tort/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ZMIENIONO: Stare usuwanie zastąpione akcją przeniesienia do archiwum
 app.post('/tort/:id/archiwizuj', async (req, res) => {
     try {
         const tort = await Tort.findById(req.params.id);
@@ -219,12 +198,12 @@ app.post('/tort/:id/archiwizuj', async (req, res) => {
         const daneDoArchiwum = tort.toObject();
         await ArchiwumTort.create(daneDoArchiwum);
         await Tort.findByIdAndDelete(req.params.id);
-        res.json({ success: true, message: "Tort zarchiwizowany pomyślnie" });
+        res.json({ success: true, message: "Tort zarchiwizowane pomyślnie" });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 
-// --- LOGOWANIE ---
+// --- NAPRAWIONE LOGOWANIE (Obsługa haseł jawnych i bcrypt) ---
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -234,7 +213,21 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ success: false, message: "Błędne dane" });
         }
 
-        const isMatch = await bcrypt.compare(password, user.pass);
+        let isMatch = false;
+
+        // Krok 1: Sprawdzenie, czy hasło w bazie pasuje jako zwykły tekst (Plain text)
+        if (password === user.pass) {
+            isMatch = true;
+        } else {
+            // Krok 2: Jeśli nie pasuje jako tekst, spróbuj porównać za pomocą bcrypt (zabezpieczenie przed błędem struktury hasha)
+            try {
+                isMatch = await bcrypt.compare(password, user.pass);
+            } catch (bcryptErr) {
+                // Jeśli hasło w bazie nie było poprawnym hashem bcrypt, biblioteka rzuci błąd. 
+                // Ignorujemy go, bo wiemy już, że zwykły tekst również nie pasował.
+                isMatch = false;
+            }
+        }
 
         if (isMatch) {
             res.json({ success: true, message: "Zalogowano" });
